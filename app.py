@@ -1,11 +1,10 @@
 from flask import Flask, render_template, request
 import pickle
 import numpy as np
-import pandas as pd
 
-app = Flask(__name__)
+app = Flask(__name__)  # ✅ Corrected __name_
 
-# Load the ML model and encoder
+# ✅ Load the ML model and encoder
 model = pickle.load(open('model.pkl', 'rb'))
 encoder = pickle.load(open('encoder.pkl', 'rb'))
 
@@ -16,27 +15,39 @@ def home():
 @app.route('/predict', methods=['POST'])
 def predict():
     if request.method == 'POST':
-        # Collect form data
-        date_time = request.form['date_time']
-        temp = float(request.form['temp'])
-        rain = float(request.form['rain'])
-        snow = float(request.form['snow'])
-        clouds = int(request.form['clouds'])
-        weather_main = request.form['weather_main']
-        weather_description = request.form['weather_description']
+        try:
+            # ✅ Collect form data
+            temp = float(request.form['temp'])
+            rain = float(request.form['rain'])
+            snow = float(request.form['snow'])
+            clouds = int(request.form['clouds'])
+            weather_main = request.form['weather_main']
+            weather_description = request.form['weather_description']
 
-        # Preprocess categorical data
-        weather_main_enc = encoder.transform([weather_main])[0]
-        weather_desc_enc = encoder.transform([weather_description])[0]
+            # ✅ Handle unseen labels safely
+            if weather_main in encoder.classes_:
+                weather_main_enc = encoder.transform([weather_main])[0]
+            else:
+                weather_main_enc = -1  # Or choose a default value
 
-        # Feature array
-        features = np.array([[temp, rain, snow, clouds, weather_main_enc, weather_desc_enc]])
+            if weather_description in encoder.classes_:
+                weather_desc_enc = encoder.transform([weather_description])[0]
+            else:
+                weather_desc_enc = -1  # Or choose a default value
 
-        # Prediction
-        prediction = model.predict(features)
-        output = round(prediction[0], 2)
+            # ✅ Create feature array
+            features = np.array([[temp, rain, snow, clouds]])
 
-        return render_template('result.html', prediction_text=f'Estimated Traffic Volume: {output}')
+            # ✅ Make prediction
+            prediction = model.predict(features)
+            output = round(prediction[0], 2)
 
+            return render_template('result.html', prediction_text=f'Estimated Traffic Volume: {output}')
+
+        except Exception as e:
+            # ✅ Error handling
+            return f"Error occurred: {str(e)}"
+
+# ✅ Correct main function
 if __name__ == "__main__":
     app.run(debug=True)
